@@ -158,10 +158,20 @@ class _HomeScreenState extends State<HomeScreen>
         }
         final ext = p.extension(_image!.path);
         final permanentPath = '${mealImagesDir.path}/${meal.id}$ext';
+        debugPrint('[SnapCal] Copying image: ${_image!.path} → $permanentPath');
         await _image!.copy(permanentPath);
-        savedMeal = meal.copyWith(imagePath: permanentPath);
-      } catch (_) {
-        // If copy fails, save meal without image
+        final saved = File(permanentPath);
+        if (await saved.exists()) {
+          debugPrint('[SnapCal] ✅ Image saved successfully (${await saved.length()} bytes)');
+          savedMeal = meal.copyWith(imagePath: permanentPath);
+        } else {
+          debugPrint('[SnapCal] ❌ Image file not found after copy!');
+          savedMeal = meal.copyWith(clearImage: true);
+        }
+      } catch (e) {
+        debugPrint('[SnapCal] ❌ Image copy failed: $e');
+        // Don't save the temp path — it will be cleaned up by the OS
+        savedMeal = meal.copyWith(clearImage: true);
       }
     }
 

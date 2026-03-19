@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'services/health_service.dart';
 import 'services/storage_service.dart';
 import 'screens/home_screen.dart';
 import 'screens/log_screen.dart';
@@ -13,6 +14,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
   await StorageService.instance.init();
+  await HealthService.instance.init();
   runApp(const CalorieLensApp());
 }
 

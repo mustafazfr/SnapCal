@@ -13,6 +13,14 @@ class HealthService {
   /// Whether health integration is enabled in user settings.
   bool get isEnabled => StorageService.instance.healthEnabled;
 
+  /// Restore authorization state on app launch.
+  /// Call this once after StorageService is initialized.
+  Future<void> init() async {
+    if (isEnabled) {
+      await requestPermissions();
+    }
+  }
+
   /// Request permission to read step data. Returns true if granted.
   Future<bool> requestPermissions() async {
     try {

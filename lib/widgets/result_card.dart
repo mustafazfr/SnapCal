@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/meal.dart';
 import '../utils/app_localizations.dart';
 
@@ -44,26 +43,10 @@ class ResultCard extends StatelessWidget {
     };
   }
 
-  void _showEditSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _EditSheet(
-        meal: meal,
-        onSave: (editedMeal) {
-          Navigator.pop(context);
-          onSave(editedMeal);
-        },
-      ),
-    );
-  }
-
   void _showCorrectionDialog(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final controller = TextEditingController();
+    final navigator = Navigator.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -74,24 +57,27 @@ class ResultCard extends StatelessWidget {
           textCapitalization: TextCapitalization.sentences,
           decoration: InputDecoration(
             hintText: loc.get('correct_food_hint'),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) {
-              Navigator.pop(ctx);
+              navigator.pop();
               onCorrect?.call(value.trim());
             }
           },
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => navigator.pop(),
             child: Text(loc.get('cancel')),
           ),
           FilledButton(
             onPressed: () {
               final value = controller.text.trim();
               if (value.isNotEmpty) {
-                Navigator.pop(ctx);
+                navigator.pop();
                 onCorrect?.call(value);
               }
             },
@@ -290,49 +276,24 @@ class ResultCard extends StatelessWidget {
                 ),
               ),
 
-            // ── Wrong food button ──
-            if (onCorrect != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Center(
-                  child: TextButton.icon(
-                    onPressed: () => _showCorrectionDialog(context),
-                    icon: Icon(Icons.help_outline_rounded,
-                        size: 16,
-                        color: cs.onSurface.withValues(alpha: 0.45)),
-                    label: Text(
-                      loc.get('not_this_food'),
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: cs.onSurface.withValues(alpha: 0.45),
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  ),
-                ),
-              ),
-
             const SizedBox(height: 14),
 
             // ── Action buttons ──
             Row(
               children: [
-                OutlinedButton(
-                  onPressed: () => _showEditSheet(context),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(52, 48),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                if (onCorrect != null)
+                  OutlinedButton.icon(
+                    onPressed: () => _showCorrectionDialog(context),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: Text(loc.get('not_this_food')),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(52, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
                   ),
-                  child: const Icon(Icons.edit_rounded, size: 20),
-                ),
-                const SizedBox(width: 10),
+                if (onCorrect != null) const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: () => onSave(meal),
@@ -413,199 +374,3 @@ class _MacroChip extends StatelessWidget {
   }
 }
 
-// ── Edit Sheet ────────────────────────────────────────────────────────────────
-
-class _EditSheet extends StatefulWidget {
-  final Meal meal;
-  final void Function(Meal) onSave;
-
-  const _EditSheet({required this.meal, required this.onSave});
-
-  @override
-  State<_EditSheet> createState() => _EditSheetState();
-}
-
-class _EditSheetState extends State<_EditSheet> {
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _portionCtrl;
-  late final TextEditingController _caloriesCtrl;
-  late final TextEditingController _proteinCtrl;
-  late final TextEditingController _carbsCtrl;
-  late final TextEditingController _fatCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameCtrl = TextEditingController(text: widget.meal.foodName);
-    _portionCtrl = TextEditingController(text: widget.meal.portionSize);
-    _caloriesCtrl =
-        TextEditingController(text: widget.meal.calories.toString());
-    _proteinCtrl =
-        TextEditingController(text: widget.meal.protein.toStringAsFixed(1));
-    _carbsCtrl =
-        TextEditingController(text: widget.meal.carbs.toStringAsFixed(1));
-    _fatCtrl =
-        TextEditingController(text: widget.meal.fat.toStringAsFixed(1));
-  }
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _portionCtrl.dispose();
-    _caloriesCtrl.dispose();
-    _proteinCtrl.dispose();
-    _carbsCtrl.dispose();
-    _fatCtrl.dispose();
-    super.dispose();
-  }
-
-  void _save() {
-    final edited = Meal(
-      id: widget.meal.id,
-      foodName: _nameCtrl.text.trim(),
-      portionSize: _portionCtrl.text.trim(),
-      calories: int.tryParse(_caloriesCtrl.text.trim()) ?? widget.meal.calories,
-      protein:
-          double.tryParse(_proteinCtrl.text.trim()) ?? widget.meal.protein,
-      carbs: double.tryParse(_carbsCtrl.text.trim()) ?? widget.meal.carbs,
-      fat: double.tryParse(_fatCtrl.text.trim()) ?? widget.meal.fat,
-      timestamp: widget.meal.timestamp,
-      imagePath: widget.meal.imagePath,
-      confidence: widget.meal.confidence,
-      notes: widget.meal.notes,
-    );
-    widget.onSave(edited);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
-      child: SingleChildScrollView(
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text(loc.get('edit_values'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _nameCtrl,
-            decoration: InputDecoration(labelText: loc.get('food_name')),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _portionCtrl,
-            decoration: InputDecoration(labelText: loc.get('portion_size')),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _caloriesCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    labelText: loc.get('calories'),
-                    suffixText: 'kcal',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _proteinCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: loc.get('protein'),
-                    suffixText: 'g',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _carbsCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: loc.get('carbs'),
-                    suffixText: 'g',
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: _fatCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: loc.get('fat'),
-                    suffixText: 'g',
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text(loc.get('cancel')),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.check_rounded),
-                  label: Text(loc.get('save_to_log')),
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 48),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-      ),
-    );
-  }
-}

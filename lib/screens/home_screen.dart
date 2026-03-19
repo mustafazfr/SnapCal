@@ -99,7 +99,8 @@ class _HomeScreenState extends State<HomeScreen>
   // ── Claude analysis ────────────────────────────────────────────────────────
 
   Future<void> _analyze({String? correction}) async {
-    if (_image == null) return;
+    final image = _image;
+    if (image == null) return;
     setState(() {
       _loading = true;
       _result = null;
@@ -107,18 +108,21 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     try {
-      final json = await _claude.analyzeImage(_image!, correction: correction);
-      final meal = ClaudeService.mealFromJson(json, _image!.path);
+      final json = await _claude.analyzeImage(image, correction: correction);
+      if (!mounted) return;
+      final meal = ClaudeService.mealFromJson(json, image.path);
       setState(() {
         _result = meal;
         _loading = false;
       });
     } on ClaudeException catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = _labeledError(e);
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _loading = false;
         _error = AppLocalizations.of(context).get('something_went_wrong');

@@ -16,19 +16,23 @@ class HealthService {
   /// Request permission to read step data. Returns true if granted.
   Future<bool> requestPermissions() async {
     try {
-      // Configure Health Connect on Android
-      Health().configure();
+      // Configure health package (required before any calls)
+      await _health.configure();
 
       final types = [HealthDataType.STEPS];
       final permissions = [HealthDataAccess.READ];
 
-      final granted = await _health.requestAuthorization(
-        types,
-        permissions: permissions,
-      );
+      // Check if already granted
+      bool hasPerms = await _health.hasPermissions(types) ?? false;
+      if (!hasPerms) {
+        hasPerms = await _health.requestAuthorization(
+          types,
+          permissions: permissions,
+        );
+      }
 
-      _authorized = granted;
-      return granted;
+      _authorized = hasPerms;
+      return hasPerms;
     } catch (e) {
       _authorized = false;
       return false;
@@ -38,6 +42,7 @@ class HealthService {
   /// Check if we already have health permissions.
   Future<bool> hasPermissions() async {
     try {
+      await _health.configure();
       final types = [HealthDataType.STEPS];
       final granted = await _health.hasPermissions(types);
       _authorized = granted ?? false;

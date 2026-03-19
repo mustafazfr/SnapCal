@@ -104,6 +104,13 @@ class StorageService {
   Future<void> setLanguage(String lang) =>
       _p.setString(AppConstants.prefLanguage, lang);
 
+  // ── Health ──────────────────────────────────────────────────────────────
+  bool get healthEnabled =>
+      _p.getBool(AppConstants.prefHealthEnabled) ?? false;
+
+  Future<void> setHealthEnabled(bool enabled) =>
+      _p.setBool(AppConstants.prefHealthEnabled, enabled);
+
   // ── Onboarding ──────────────────────────────────────────────────────────
   bool get onboardingDone =>
       _p.getBool(AppConstants.prefOnboardingDone) ?? false;

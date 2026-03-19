@@ -12,5 +12,10 @@ class AppConstants {
   static const String prefLanguage = 'language';
   static const String prefOnboardingDone = 'onboarding_done';
 
+  static const String prefHealthEnabled = 'health_enabled';
+
   static const int defaultCalorieGoal = 2000;
+
+  /// Average calories burned per step (~0.04 kcal for an average person).
+  static const double caloriesPerStep = 0.04;
 }

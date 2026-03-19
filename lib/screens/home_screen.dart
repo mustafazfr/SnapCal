@@ -149,9 +149,11 @@ class _HomeScreenState extends State<HomeScreen>
   Future<void> _save(Meal meal) async {
     // Copy image from temp directory to permanent app storage
     var savedMeal = meal;
+    debugPrint('[SnapCal] _save called — _image: ${_image?.path}, meal.imagePath: ${meal.imagePath}');
     if (_image != null && meal.imagePath != null) {
       try {
         final appDir = await getApplicationDocumentsDirectory();
+        debugPrint('[SnapCal] Documents dir: ${appDir.path}');
         final mealImagesDir = Directory('${appDir.path}/meal_images');
         if (!await mealImagesDir.exists()) {
           await mealImagesDir.create(recursive: true);
@@ -159,6 +161,8 @@ class _HomeScreenState extends State<HomeScreen>
         final ext = p.extension(_image!.path);
         final permanentPath = '${mealImagesDir.path}/${meal.id}$ext';
         debugPrint('[SnapCal] Copying image: ${_image!.path} → $permanentPath');
+        final sourceExists = await _image!.exists();
+        debugPrint('[SnapCal] Source file exists: $sourceExists (${sourceExists ? await _image!.length() : 0} bytes)');
         await _image!.copy(permanentPath);
         final saved = File(permanentPath);
         if (await saved.exists()) {
@@ -173,8 +177,11 @@ class _HomeScreenState extends State<HomeScreen>
         // Don't save the temp path — it will be cleaned up by the OS
         savedMeal = meal.copyWith(clearImage: true);
       }
+    } else {
+      debugPrint('[SnapCal] ⚠️ Skipping image copy: _image=${_image != null}, meal.imagePath=${meal.imagePath != null}');
     }
 
+    debugPrint('[SnapCal] Final savedMeal.imagePath: ${savedMeal.imagePath}');
     await StorageService.instance.saveMeal(savedMeal);
     if (!mounted) return;
     final loc = AppLocalizations.of(context);

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meal.dart';
@@ -51,6 +52,13 @@ class _LogScreenState extends State<LogScreen>
     }
 
     if (!mounted) return;
+    for (final m in meals) {
+      debugPrint('[SnapCal] Loaded meal "${m.foodName}" imagePath: ${m.imagePath}');
+      if (m.imagePath != null) {
+        final exists = File(m.imagePath!).existsSync();
+        debugPrint('[SnapCal]   → File exists: $exists');
+      }
+    }
     setState(() {
       _meals = meals;
       _healthEnabled = healthOn;

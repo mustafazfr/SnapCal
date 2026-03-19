@@ -209,7 +209,10 @@ class _SettingsScreenState extends State<SettingsScreen>
         title: Text(loc.get('settings'),
             style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: ListView(
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // ── Language ─────────────────────────────────────────────────
@@ -485,6 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
           const SizedBox(height: 32),
         ],
+      ),
       ),
     );
   }

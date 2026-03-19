@@ -2,18 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- HealthKit permissions -->
-	<key>NSHealthShareUsageDescription</key>
-	<string>SnapCal reads your step count to estimate daily calories burned.</string>
-
-	<!-- image_picker permissions -->
-	<key>NSCameraUsageDescription</key>
-	<string>CalorieLens needs camera access to photograph your meals for calorie analysis.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>CalorieLens needs photo library access so you can pick meal photos for calorie analysis.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>CalorieLens needs permission to save meal photos to your photo library.</string>
-
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -38,6 +26,14 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>CalorieLens needs camera access to photograph your meals for calorie analysis.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>SnapCal reads your step count to estimate daily calories burned.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>CalorieLens needs permission to save meal photos to your photo library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CalorieLens needs photo library access so you can pick meal photos for calorie analysis.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

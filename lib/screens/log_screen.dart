@@ -53,10 +53,10 @@ class _LogScreenState extends State<LogScreen>
 
     if (!mounted) return;
     for (final m in meals) {
-      debugPrint('[SnapCal] Loaded meal "${m.foodName}" imagePath: ${m.imagePath}');
-      if (m.imagePath != null) {
-        final exists = File(m.imagePath!).existsSync();
-        debugPrint('[SnapCal]   → File exists: $exists');
+      final resolved = StorageService.instance.resolveImagePath(m.imagePath);
+      debugPrint('[SnapCal] Loaded meal "${m.foodName}" stored: ${m.imagePath} → resolved: $resolved');
+      if (resolved != null) {
+        debugPrint('[SnapCal]   → File exists: ${File(resolved).existsSync()}');
       }
     }
     setState(() {

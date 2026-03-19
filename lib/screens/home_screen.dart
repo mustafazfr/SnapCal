@@ -159,15 +159,17 @@ class _HomeScreenState extends State<HomeScreen>
           await mealImagesDir.create(recursive: true);
         }
         final ext = p.extension(_image!.path);
-        final permanentPath = '${mealImagesDir.path}/${meal.id}$ext';
+        final relativePath = 'meal_images/${meal.id}$ext';
+        final permanentPath = '${appDir.path}/$relativePath';
         debugPrint('[SnapCal] Copying image: ${_image!.path} → $permanentPath');
         final sourceExists = await _image!.exists();
         debugPrint('[SnapCal] Source file exists: $sourceExists (${sourceExists ? await _image!.length() : 0} bytes)');
         await _image!.copy(permanentPath);
         final saved = File(permanentPath);
         if (await saved.exists()) {
-          debugPrint('[SnapCal] ✅ Image saved successfully (${await saved.length()} bytes)');
-          savedMeal = meal.copyWith(imagePath: permanentPath);
+          debugPrint('[SnapCal] ✅ Image saved (${await saved.length()} bytes), relative: $relativePath');
+          // Store RELATIVE path — absolute path changes on every Xcode reinstall
+          savedMeal = meal.copyWith(imagePath: relativePath);
         } else {
           debugPrint('[SnapCal] ❌ Image file not found after copy!');
           savedMeal = meal.copyWith(clearImage: true);

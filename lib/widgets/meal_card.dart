@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../models/meal.dart';
+import '../services/storage_service.dart';
 
 /// Compact card shown in the Log screen list.
 class MealCard extends StatelessWidget {
@@ -141,20 +142,25 @@ class _MealDetailSheet extends StatelessWidget {
           ),
 
           // Hero image (large)
-          if (meal.imagePath != null &&
-              File(meal.imagePath!).existsSync())
-            Hero(
-              tag: 'meal_image_${meal.id}',
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.file(
-                  File(meal.imagePath!),
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+          if (meal.imagePath != null)
+            Builder(builder: (context) {
+              final resolved = StorageService.instance.resolveImagePath(meal.imagePath);
+              if (resolved == null || !File(resolved).existsSync()) {
+                return const SizedBox.shrink();
+              }
+              return Hero(
+                tag: 'meal_image_${meal.id}',
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    File(resolved),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
 
           const SizedBox(height: 16),
           Text(
@@ -304,13 +310,13 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fileExists =
-        imagePath != null && File(imagePath!).existsSync();
+    final resolved = StorageService.instance.resolveImagePath(imagePath);
+    final fileExists = resolved != null && File(resolved).existsSync();
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: fileExists
           ? Image.file(
-              File(imagePath!),
+              File(resolved),
               width: 56,
               height: 56,
               fit: BoxFit.cover,

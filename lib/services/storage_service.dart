@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/meal.dart';
@@ -85,6 +86,13 @@ class StorageService {
       _mealKey(meal.timestamp),
       jsonEncode(meals.map((m) => m.toJson()).toList()),
     );
+    // Delete saved image file if it exists
+    if (meal.imagePath != null) {
+      try {
+        final file = File(meal.imagePath!);
+        if (await file.exists()) await file.delete();
+      } catch (_) {}
+    }
   }
 
   /// Returns a map of DateTime → total calories for 7 days starting at [weekStart].

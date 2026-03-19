@@ -56,4 +56,18 @@ class Meal {
       );
 
   String get formattedTime => DateFormat('h:mm a').format(timestamp);
+
+  Meal copyWith({String? imagePath}) => Meal(
+        id: id,
+        foodName: foodName,
+        portionSize: portionSize,
+        calories: calories,
+        protein: protein,
+        carbs: carbs,
+        fat: fat,
+        timestamp: timestamp,
+        imagePath: imagePath ?? this.imagePath,
+        confidence: confidence,
+        notes: notes,
+      );
 }

@@ -18,6 +18,8 @@ dependencies:
   flutter_dotenv: ^5.2.1
   health: ^11.0.0
   permission_handler: ^11.3.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:

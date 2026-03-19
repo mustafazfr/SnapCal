@@ -141,7 +141,8 @@ class _MealDetailSheet extends StatelessWidget {
           ),
 
           // Hero image (large)
-          if (meal.imagePath != null)
+          if (meal.imagePath != null &&
+              File(meal.imagePath!).existsSync())
             Hero(
               tag: 'meal_image_${meal.id}',
               child: ClipRRect(
@@ -303,9 +304,11 @@ class _Thumbnail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final fileExists =
+        imagePath != null && File(imagePath!).existsSync();
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
-      child: imagePath != null
+      child: fileExists
           ? Image.file(
               File(imagePath!),
               width: 56,

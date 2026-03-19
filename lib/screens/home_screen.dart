@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import '../models/meal.dart';
 import '../services/claude_service.dart';
 import '../services/storage_service.dart';
@@ -140,7 +142,25 @@ class _HomeScreenState extends State<HomeScreen>
   // ── Save to log ────────────────────────────────────────────────────────────
 
   Future<void> _save(Meal meal) async {
-    await StorageService.instance.saveMeal(meal);
+    // Copy image from temp directory to permanent app storage
+    var savedMeal = meal;
+    if (_image != null && meal.imagePath != null) {
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        final mealImagesDir = Directory('${appDir.path}/meal_images');
+        if (!await mealImagesDir.exists()) {
+          await mealImagesDir.create(recursive: true);
+        }
+        final ext = p.extension(_image!.path);
+        final permanentPath = '${mealImagesDir.path}/${meal.id}$ext';
+        await _image!.copy(permanentPath);
+        savedMeal = meal.copyWith(imagePath: permanentPath);
+      } catch (_) {
+        // If copy fails, save meal without image
+      }
+    }
+
+    await StorageService.instance.saveMeal(savedMeal);
     if (!mounted) return;
     final loc = AppLocalizations.of(context);
     ScaffoldMessenger.of(context).showSnackBar(

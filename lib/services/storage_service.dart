@@ -66,7 +66,7 @@ class StorageService {
     return list
         .map((e) => Meal.fromJson(e as Map<String, dynamic>))
         .toList()
-      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   }
 
   Future<void> saveMeal(Meal meal) async {

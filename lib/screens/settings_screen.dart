@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/health_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_localizations.dart';
 import '../utils/tdee_calculator.dart';
@@ -29,6 +30,9 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Language
   late AppLanguage _selectedLanguage;
 
+  // Health
+  late bool _healthEnabled;
+
   // TDEE form
   final _ageCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
@@ -46,6 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _goalCtrl.text = StorageService.instance.calorieGoal.toString();
     _themeMode = StorageService.instance.themeMode;
     _selectedLanguage = _resolveCurrentLanguage();
+    _healthEnabled = StorageService.instance.healthEnabled;
   }
 
   AppLanguage _resolveCurrentLanguage() {
@@ -99,6 +104,21 @@ class _SettingsScreenState extends State<SettingsScreen>
     await StorageService.instance.setLanguage(lang == AppLanguage.tr ? 'tr' : 'en');
     setState(() => _selectedLanguage = lang);
     widget.onLanguageChanged(lang);
+  }
+
+  // ── Health ───────────────────────────────────────────────────────────────
+
+  Future<void> _toggleHealth(bool enabled) async {
+    final loc = AppLocalizations.of(context);
+    if (enabled) {
+      final granted = await HealthService.instance.requestPermissions();
+      if (!granted) {
+        if (mounted) _snack(loc.get('health_permission_denied'), error: true);
+        return;
+      }
+    }
+    await StorageService.instance.setHealthEnabled(enabled);
+    setState(() => _healthEnabled = enabled);
   }
 
   // ── TDEE calculator ────────────────────────────────────────────────────────
@@ -268,6 +288,21 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ],
               ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Health Integration ──────────────────────────────────────────
+          _Label(loc.get('health_integration'), cs.primary),
+          Card(
+            child: SwitchListTile(
+              secondary: Icon(Icons.directions_walk_rounded, color: cs.primary),
+              title: Text(loc.get('step_tracking'),
+                  style: const TextStyle(fontWeight: FontWeight.w500)),
+              subtitle: Text(loc.get('step_tracking_desc')),
+              value: _healthEnabled,
+              onChanged: _toggleHealth,
             ),
           ),
 

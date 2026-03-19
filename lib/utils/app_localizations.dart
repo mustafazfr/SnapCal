@@ -204,6 +204,23 @@ class AppLocalizations extends InheritedWidget {
       'moderately_active': 'Moderately active (3-5 days/week)',
       'very_active': 'Very active (6-7 days/week)',
       'extra_active': 'Extra active (athlete)',
+
+      // Health Integration
+      'health_integration': 'Health Integration',
+      'step_tracking': 'Step Tracking',
+      'step_tracking_desc': 'Read steps from Apple Health or Health Connect',
+      'health_permission_denied': 'Health permission denied. Enable in device Settings.',
+      'health_not_available': 'Health data not available on this device.',
+      'daily_steps': 'Daily steps',
+      'calories_burned': 'Calories burned',
+      'steps': 'steps',
+      'burned': 'Burned',
+      'net_calories': 'Net calories',
+      'activity': 'Activity',
+      'avg_steps': 'Avg steps',
+      'est_burned': 'Est. burned',
+      'steps_label': 'Steps',
+      'net': 'Net',
     },
     AppLanguage.tr: {
       // Navigation
@@ -375,6 +392,23 @@ class AppLocalizations extends InheritedWidget {
       'moderately_active': 'Orta hareketli (haftada 3-5 gün)',
       'very_active': 'Çok hareketli (haftada 6-7 gün)',
       'extra_active': 'Ekstra hareketli (sporcu)',
+
+      // Health Integration
+      'health_integration': 'Sağlık Entegrasyonu',
+      'step_tracking': 'Adım Takibi',
+      'step_tracking_desc': 'Apple Health veya Health Connect\'ten adım oku',
+      'health_permission_denied': 'Sağlık izni reddedildi. Cihaz Ayarlarından etkinleştirin.',
+      'health_not_available': 'Bu cihazda sağlık verisi mevcut değil.',
+      'daily_steps': 'Günlük adım',
+      'calories_burned': 'Yakılan kalori',
+      'steps': 'adım',
+      'burned': 'Yakılan',
+      'net_calories': 'Net kalori',
+      'activity': 'Aktivite',
+      'avg_steps': 'Ort. adım',
+      'est_burned': 'Tahmini yakılan',
+      'steps_label': 'Adım',
+      'net': 'Net',
     },
   };
 }

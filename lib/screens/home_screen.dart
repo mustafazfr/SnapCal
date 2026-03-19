@@ -108,7 +108,8 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     try {
-      final json = await _claude.analyzeImage(image, correction: correction);
+      final lang = AppLocalizations.of(context).language.name;
+      final json = await _claude.analyzeImage(image, correction: correction, langCode: lang);
       if (!mounted) return;
       final meal = ClaudeService.mealFromJson(json, image.path);
       setState(() {
@@ -171,9 +172,9 @@ class _HomeScreenState extends State<HomeScreen>
       SnackBar(
         content: Text('${meal.foodName} ${loc.get('saved_to_log')}'),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        action: SnackBarAction(label: loc.get('ok'), onPressed: () {}),
       ),
     );
     setState(() {

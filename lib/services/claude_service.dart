@@ -61,11 +61,18 @@ Respond ONLY with a valid JSON object. No markdown, no code fences, no explanati
 If you cannot identify food in the image, set foodName to "Unknown" and confidence to "low".
 ''';
 
+  /// Returns a language instruction to append to the prompt.
+  static String _languageInstruction(String langCode) {
+    final langName = langCode == 'tr' ? 'Turkish' : 'English';
+    return '\n\nLANGUAGE REQUIREMENT: You MUST respond with the "foodName" and "notes" fields in $langName. The nutritional data fields remain as numbers. For example, if the language is Turkish, write "Izgara Köfte" instead of "Grilled Meatballs".';
+  }
+
   /// Analyzes a food image. If [correction] is provided, it's sent as
   /// user feedback so the model can correct its previous analysis.
   Future<Map<String, dynamic>> analyzeImage(
     File imageFile, {
     String? correction,
+    String langCode = 'en',
   }) async {
     final apiKey = dotenv.env['CLAUDE_API_KEY'] ?? '';
 
@@ -80,9 +87,10 @@ If you cannot identify food in the image, set foodName to "Unknown" and confiden
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
+      final langInst = _languageInstruction(langCode);
       final promptText = correction != null
-          ? '$_prompt\n\nIMPORTANT CORRECTION FROM USER: Your previous analysis was wrong. The user says this food is actually: "$correction". Please re-analyze with this correction in mind and provide accurate nutritional values for what the user described.'
-          : _prompt;
+          ? '$_prompt$langInst\n\nIMPORTANT CORRECTION FROM USER: Your previous analysis was wrong. The user says this food is actually: "$correction". Please re-analyze with this correction in mind and provide accurate nutritional values for what the user described.'
+          : '$_prompt$langInst';
 
       final response = await http.post(
         Uri.parse(_apiUrl),

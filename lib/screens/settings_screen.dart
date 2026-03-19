@@ -188,6 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       SnackBar(
         content: Text(msg),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
         backgroundColor: error ? Colors.red.shade700 : null,
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

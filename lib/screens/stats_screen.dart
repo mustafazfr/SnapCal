@@ -100,6 +100,13 @@ class _StatsScreenState extends State<StatsScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    // Auto-refresh when health toggle changes (IndexedStack keeps state alive)
+    final currentHealthEnabled = HealthService.instance.isEnabled;
+    if (currentHealthEnabled != _healthEnabled && !_loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
     final loc = AppLocalizations.of(context);
     return Scaffold(
       body: RefreshIndicator(

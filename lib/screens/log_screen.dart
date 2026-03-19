@@ -84,6 +84,7 @@ class _LogScreenState extends State<LogScreen>
       SnackBar(
         content: Text(loc.get('meal_deleted')),
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         action: SnackBarAction(
@@ -146,6 +147,14 @@ class _LogScreenState extends State<LogScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+
+    // Auto-refresh when health setting changed externally (e.g. from Settings tab)
+    final currentHealthEnabled = HealthService.instance.isEnabled;
+    if (currentHealthEnabled != _healthEnabled && !_loading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load();
+      });
+    }
     final loc = AppLocalizations.of(context);
     return Scaffold(
       body: RefreshIndicator(

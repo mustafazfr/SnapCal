@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/meal.dart';
+import '../services/health_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_localizations.dart';
 import '../widgets/meal_card.dart';
@@ -18,6 +19,8 @@ class _LogScreenState extends State<LogScreen>
   DateTime _selectedDate = DateTime.now();
   List<Meal> _meals = [];
   bool _loading = true;
+  int _steps = 0;
+  bool _healthEnabled = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -39,9 +42,19 @@ class _LogScreenState extends State<LogScreen>
     setState(() => _loading = true);
     final meals =
         await StorageService.instance.getMealsForDate(_selectedDate);
+
+    // Load health data if enabled
+    final healthOn = HealthService.instance.isEnabled;
+    int steps = 0;
+    if (healthOn) {
+      steps = await HealthService.instance.getStepsForDate(_selectedDate);
+    }
+
     if (!mounted) return;
     setState(() {
       _meals = meals;
+      _healthEnabled = healthOn;
+      _steps = steps;
       _loading = false;
     });
   }
@@ -111,6 +124,9 @@ class _LogScreenState extends State<LogScreen>
 
   int get _total => _meals.fold(0, (s, m) => s + m.calories);
   int get _goal => StorageService.instance.calorieGoal;
+  int get _burned => HealthService.estimateCaloriesBurned(_steps);
+  int get _net => _total - _burned;
+  int get _remaining => _goal - _net;
   bool get _isToday => _sameDay(_selectedDate, DateTime.now());
 
   String get _dateLabel {
@@ -167,6 +183,17 @@ class _LogScreenState extends State<LogScreen>
                     if (_meals.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _MacroRow(meals: _meals),
+                    ],
+                    if (_healthEnabled && _meals.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _CalorieBalanceCard(
+                        eaten: _total,
+                        burned: _burned,
+                        steps: _steps,
+                        goal: _goal,
+                        net: _net,
+                        remaining: _remaining,
+                      ),
                     ],
                     const SizedBox(height: 4),
                   ],
@@ -325,6 +352,190 @@ class _Chip extends StatelessWidget {
           ],
         ),
       );
+}
+
+// ── Calorie balance card ──────────────────────────────────────────────────────
+
+class _CalorieBalanceCard extends StatelessWidget {
+  final int eaten;
+  final int burned;
+  final int steps;
+  final int goal;
+  final int net;
+  final int remaining;
+
+  const _CalorieBalanceCard({
+    required this.eaten,
+    required this.burned,
+    required this.steps,
+    required this.goal,
+    required this.net,
+    required this.remaining,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final loc = AppLocalizations.of(context);
+    final isOver = remaining < 0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Title row
+            Row(
+              children: [
+                Icon(Icons.balance_rounded,
+                    size: 18, color: cs.primary),
+                const SizedBox(width: 6),
+                Text(
+                  loc.get('calorie_balance'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Balance row: eaten - burned = net
+            Row(
+              children: [
+                Expanded(
+                  child: _BalanceItem(
+                    icon: Icons.restaurant_rounded,
+                    label: loc.get('eaten'),
+                    value: '$eaten',
+                    color: const Color(0xFFE8622A),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('−',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onSurface.withValues(alpha: 0.35))),
+                ),
+                Expanded(
+                  child: _BalanceItem(
+                    icon: Icons.directions_walk_rounded,
+                    label: '${loc.get('burned')} ($steps ${loc.get('steps')})',
+                    value: '$burned',
+                    color: const Color(0xFF5C9E4A),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('=',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: cs.onSurface.withValues(alpha: 0.35))),
+                ),
+                Expanded(
+                  child: _BalanceItem(
+                    icon: Icons.track_changes_rounded,
+                    label: loc.get('net'),
+                    value: '$net',
+                    color: cs.primary,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            // Remaining message
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: isOver
+                    ? Colors.red.withValues(alpha: 0.08)
+                    : const Color(0xFF5C9E4A).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    isOver
+                        ? Icons.warning_amber_rounded
+                        : Icons.check_circle_outline_rounded,
+                    size: 16,
+                    color: isOver
+                        ? Colors.red.shade500
+                        : const Color(0xFF5C9E4A),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    isOver
+                        ? loc
+                            .get('you_are_over')
+                            .replaceAll('%s', '${remaining.abs()}')
+                        : loc
+                            .get('you_can_eat_more')
+                            .replaceAll('%s', '$remaining'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isOver
+                              ? Colors.red.shade500
+                              : const Color(0xFF5C9E4A),
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BalanceItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _BalanceItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 9,
+            color: color.withValues(alpha: 0.70),
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
 }
 
 // ── Delete swipe background ───────────────────────────────────────────────────

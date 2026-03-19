@@ -221,6 +221,12 @@ class AppLocalizations extends InheritedWidget {
       'est_burned': 'Est. burned',
       'steps_label': 'Steps',
       'net': 'Net',
+      'eaten': 'Eaten',
+      'remaining': 'Remaining',
+      'over_goal': 'Over goal',
+      'calorie_balance': 'Calorie Balance',
+      'you_can_eat_more': 'You can eat %s more kcal',
+      'you_are_over': 'You are %s kcal over goal',
     },
     AppLanguage.tr: {
       // Navigation
@@ -409,6 +415,12 @@ class AppLocalizations extends InheritedWidget {
       'est_burned': 'Tahmini yakılan',
       'steps_label': 'Adım',
       'net': 'Net',
+      'eaten': 'Yenen',
+      'remaining': 'Kalan',
+      'over_goal': 'Hedef aşıldı',
+      'calorie_balance': 'Kalori Dengesi',
+      'you_can_eat_more': '%s kcal daha yiyebilirsin',
+      'you_are_over': 'Hedefi %s kcal aştın',
     },
   };
 }

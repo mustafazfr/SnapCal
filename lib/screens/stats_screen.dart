@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../services/health_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_localizations.dart';
 
@@ -15,6 +16,8 @@ class _StatsScreenState extends State<StatsScreen>
     with AutomaticKeepAliveClientMixin {
   int _weekOffset = 0;
   Map<DateTime, int> _data = {};
+  Map<DateTime, int> _stepsData = {};
+  bool _healthEnabled = false;
   bool _loading = true;
   int? _touchedIndex;
 
@@ -42,9 +45,19 @@ class _StatsScreenState extends State<StatsScreen>
     setState(() => _loading = true);
     final data =
         await StorageService.instance.getWeeklyCalories(_weekStart);
+
+    // Load health data if enabled
+    final healthOn = HealthService.instance.isEnabled;
+    Map<DateTime, int> steps = {};
+    if (healthOn) {
+      steps = await HealthService.instance.getWeeklySteps(_weekStart);
+    }
+
     if (!mounted) return;
     setState(() {
       _data = data;
+      _stepsData = steps;
+      _healthEnabled = healthOn;
       _loading = false;
       _touchedIndex = null;
     });
@@ -71,6 +84,18 @@ class _StatsScreenState extends State<StatsScreen>
   int get _maxCalories => _values.fold(0, (a, b) => a > b ? a : b);
   int get _daysUnderGoal =>
       _values.where((v) => v > 0 && v <= _goal).length;
+
+  // Health computed values
+  List<int> get _stepValues => List.generate(
+      7, (i) => _stepsData[_weekStart.add(Duration(days: i))] ?? 0);
+  int get _avgSteps {
+    final nonZero = _stepValues.where((v) => v > 0).toList();
+    if (nonZero.isEmpty) return 0;
+    return nonZero.fold(0, (s, v) => s + v) ~/ nonZero.length;
+  }
+
+  int get _totalBurned => _stepValues.fold(
+      0, (s, v) => s + HealthService.estimateCaloriesBurned(v));
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +172,15 @@ class _StatsScreenState extends State<StatsScreen>
                               goal: _goal,
                             ),
                           ],
+                          if (_healthEnabled) ...[
+                            const SizedBox(height: 16),
+                            _SectionTitle(loc.get('activity')),
+                            const SizedBox(height: 8),
+                            _ActivitySummary(
+                              avgSteps: _avgSteps,
+                              totalBurned: _totalBurned,
+                            ),
+                          ],
                           const SizedBox(height: 16),
                           _SectionTitle(loc.get('daily_breakdown')),
                           const SizedBox(height: 8),
@@ -165,12 +199,14 @@ class _StatsScreenState extends State<StatsScreen>
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return List.generate(7, (i) {
       final date = _weekStart.add(Duration(days: i));
+      final steps = _healthEnabled ? _stepValues[i] : null;
       return _DayRow(
         dayLabel: days[i],
         date: date,
         calories: _values[i],
         goal: _goal,
         isToday: _sameDay(date, DateTime.now()),
+        steps: steps,
       );
     });
   }
@@ -590,6 +626,7 @@ class _DayRow extends StatelessWidget {
   final int calories;
   final int goal;
   final bool isToday;
+  final int? steps;
 
   const _DayRow({
     required this.dayLabel,
@@ -597,6 +634,7 @@ class _DayRow extends StatelessWidget {
     required this.calories,
     required this.goal,
     required this.isToday,
+    this.steps,
   });
 
   Color _fill() {
@@ -675,6 +713,34 @@ class _DayRow extends StatelessWidget {
                           ? cs.onSurface.withValues(alpha: 0.28)
                           : cs.onSurface.withValues(alpha: 0.55)),
                 ),
+                if (steps != null && steps! > 0) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(Icons.directions_walk_rounded,
+                          size: 12,
+                          color: cs.onSurface.withValues(alpha: 0.40)),
+                      const SizedBox(width: 3),
+                      Text(
+                        '${NumberFormat('#,###').format(steps)} ${loc.get('steps')}',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSurface.withValues(alpha: 0.45)),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.local_fire_department_rounded,
+                          size: 12,
+                          color: cs.onSurface.withValues(alpha: 0.40)),
+                      const SizedBox(width: 2),
+                      Text(
+                        '${HealthService.estimateCaloriesBurned(steps!)} kcal',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: cs.onSurface.withValues(alpha: 0.45)),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -687,6 +753,43 @@ class _DayRow extends StatelessWidget {
                     color: _fill())),
         ],
       ),
+    );
+  }
+}
+
+class _ActivitySummary extends StatelessWidget {
+  final int avgSteps;
+  final int totalBurned;
+
+  const _ActivitySummary({
+    required this.avgSteps,
+    required this.totalBurned,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final fmt = NumberFormat('#,###');
+    return Row(
+      children: [
+        Expanded(
+          child: _Tile(
+            loc.get('avg_steps'),
+            '${fmt.format(avgSteps)} / day',
+            Icons.directions_walk_rounded,
+            const Color(0xFF4A9ECE),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Tile(
+            loc.get('est_burned'),
+            '${fmt.format(totalBurned)} kcal',
+            Icons.local_fire_department_rounded,
+            const Color(0xFFE8622A),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import '../utils/constants.dart';
 import 'storage_service.dart';
@@ -8,6 +9,7 @@ class HealthService {
   HealthService._();
 
   final Health _health = Health();
+  bool _configured = false;
   bool _authorized = false;
 
   /// Whether health integration is enabled in user settings.
@@ -21,57 +23,66 @@ class HealthService {
     }
   }
 
+  /// Configure the health plugin (idempotent).
+  Future<void> _ensureConfigured() async {
+    if (!_configured) {
+      await _health.configure();
+      _configured = true;
+    }
+  }
+
   /// Request permission to read step data. Returns true if granted.
   Future<bool> requestPermissions() async {
     try {
-      // Configure health package (required before any calls)
-      await _health.configure();
+      await _ensureConfigured();
 
       final types = [HealthDataType.STEPS];
       final permissions = [HealthDataAccess.READ];
 
-      // Check if already granted
-      bool hasPerms = await _health.hasPermissions(types) ?? false;
-      if (!hasPerms) {
-        hasPerms = await _health.requestAuthorization(
-          types,
-          permissions: permissions,
-        );
-      }
+      // Always call requestAuthorization — on iOS hasPermissions() is
+      // unreliable (returns null) so we can't trust it.
+      final granted = await _health.requestAuthorization(
+        types,
+        permissions: permissions,
+      );
 
-      _authorized = hasPerms;
-      return hasPerms;
+      _authorized = granted;
+      debugPrint('[SnapCal] Health requestAuthorization → $granted');
+      return granted;
     } catch (e) {
+      debugPrint('[SnapCal] Health requestPermissions error: $e');
       _authorized = false;
-      return false;
-    }
-  }
-
-  /// Check if we already have health permissions.
-  Future<bool> hasPermissions() async {
-    try {
-      await _health.configure();
-      final types = [HealthDataType.STEPS];
-      final granted = await _health.hasPermissions(types);
-      _authorized = granted ?? false;
-      return _authorized;
-    } catch (_) {
       return false;
     }
   }
 
   /// Get total step count for a specific date (midnight to midnight).
   Future<int> getStepsForDate(DateTime date) async {
-    if (!_authorized && !await hasPermissions()) return 0;
+    if (!isEnabled) return 0;
+
+    // Ensure we have authorization (re-request if needed)
+    if (!_authorized) {
+      await requestPermissions();
+      if (!_authorized) return 0;
+    }
+
+    final start = DateTime(date.year, date.month, date.day);
+    final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
     try {
-      final start = DateTime(date.year, date.month, date.day);
-      final end = DateTime(date.year, date.month, date.day, 23, 59, 59);
-
       final steps = await _health.getTotalStepsInInterval(start, end);
       return steps ?? 0;
-    } catch (_) {
-      return 0;
+    } catch (e) {
+      // Retry once after re-configuring (HealthKit sometimes needs a warm-up)
+      debugPrint('[SnapCal] Steps query failed, retrying: $e');
+      try {
+        _configured = false;
+        await _ensureConfigured();
+        final steps = await _health.getTotalStepsInInterval(start, end);
+        return steps ?? 0;
+      } catch (_) {
+        return 0;
+      }
     }
   }
 

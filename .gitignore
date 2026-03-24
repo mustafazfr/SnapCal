@@ -46,3 +46,6 @@ app.*.map.json
 
 # Environment variables — never commit real keys
 .env
+
+# Backend node_modules
+backend/node_modules/

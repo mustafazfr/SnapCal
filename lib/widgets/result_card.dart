@@ -128,18 +128,12 @@ class _ResultCardState extends State<ResultCard> {
 
     navigator.pop();
 
-    // Porsiyon değiştiyse yerel olarak güncelle
-    if (trimmedPortion.isNotEmpty && trimmedPortion != _meal.portionSize) {
-      setState(() => _meal = _meal.copyWith(portionSize: trimmedPortion));
-    }
-
-    // Yemek adı verilmişse Claude'a tekrar gönder
-    if (trimmedName.isNotEmpty) {
-      final correction = trimmedPortion.isNotEmpty
-          ? '$trimmedName, porsiyon: $trimmedPortion'
-          : trimmedName;
-      widget.onCorrect?.call(correction);
-    }
+    // Her durumda Claude'a gönder — porsiyon değişince kalori de değişir
+    final foodName = trimmedName.isNotEmpty ? trimmedName : _meal.foodName;
+    final correction = trimmedPortion.isNotEmpty
+        ? '$foodName, porsiyon: $trimmedPortion'
+        : foodName;
+    widget.onCorrect?.call(correction);
   }
 
   @override

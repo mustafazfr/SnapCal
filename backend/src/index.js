@@ -3,7 +3,6 @@
  *
  * Endpoints:
  *   POST /api/analyze  — food image analysis (Claude Sonnet, vision)
- *   POST /api/chat     — health chatbox (Claude Haiku, text)
  *   POST /api/report   — weekly nutrition report (Claude Haiku, text)
  *
  * Required secrets (set via `wrangler secret put`):
@@ -44,7 +43,6 @@ export default {
 
     try {
       if (url.pathname === '/api/analyze') return handleAnalyze(request, env);
-      if (url.pathname === '/api/chat')    return handleChat(request, env);
       if (url.pathname === '/api/report')  return handleReport(request, env);
       return jsonError('Not found', 404);
     } catch (e) {
@@ -119,49 +117,6 @@ If you cannot identify food in the image, set foodName to "Unknown" and confiden
           { type: 'text', text: promptText },
         ],
       }],
-    }),
-  });
-
-  const data = await anthropicRes.json();
-  return jsonResponse(data, anthropicRes.status);
-}
-
-// ─── /api/chat ────────────────────────────────────────────────────────────────
-
-async function handleChat(request, env) {
-  const { messages, lang = 'en', calorie_goal, today_calories } =
-    await request.json();
-
-  if (!messages || !Array.isArray(messages)) {
-    return jsonError('messages array is required', 400);
-  }
-
-  const langName = lang === 'tr' ? 'Türkçe' : 'English';
-  const systemPrompt = `You are the health assistant of the CalorieLens app.
-
-RULES:
-- ONLY answer questions about health, nutrition, diet, fitness, exercise, and wellness.
-- For unrelated questions, politely say "I can only help with health topics."
-- Do NOT make medical diagnoses. Recommend consulting a doctor when appropriate.
-- Keep answers concise (max 3-4 paragraphs).
-- Always respond in ${langName}.
-
-USER PROFILE:
-- Daily calorie goal: ${calorie_goal ?? 'unknown'} kcal
-- Today's calorie intake: ${today_calories ?? 'unknown'} kcal`;
-
-  const anthropicRes = await fetch(ANTHROPIC_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: HAIKU_MODEL,
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: messages.slice(-15), // Last 15 messages for context window
     }),
   });
 

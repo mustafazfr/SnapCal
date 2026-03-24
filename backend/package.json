@@ -1,0 +1,12 @@
+{
+  "name": "calorielens-api",
+  "version": "1.0.0",
+  "description": "CalorieLens backend proxy — Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

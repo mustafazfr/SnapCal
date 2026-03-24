@@ -24,8 +24,13 @@ enum ClaudeError {
 }
 
 class ClaudeService {
-  static const _apiUrl = 'https://api.anthropic.com/v1/messages';
+  static const _directApiUrl = 'https://api.anthropic.com/v1/messages';
   static const _model = 'claude-sonnet-4-5-20250929';
+
+  /// If BACKEND_URL is set in .env, requests go through the proxy.
+  /// Otherwise falls back to direct Anthropic API (dev mode).
+  static String? get _backendUrl => dotenv.env['BACKEND_URL'];
+  static bool get _useProxy => _backendUrl != null && _backendUrl!.isNotEmpty;
 
   static const _prompt = '''
 You are a professional nutritionist AI analyzing a food photo.
@@ -69,128 +74,80 @@ If you cannot identify food in the image, set foodName to "Unknown" and confiden
 
   /// Analyzes a food image. If [correction] is provided, it's sent as
   /// user feedback so the model can correct its previous analysis.
+  /// Routes through backend proxy if BACKEND_URL is set in .env.
   Future<Map<String, dynamic>> analyzeImage(
     File imageFile, {
     String? correction,
     String langCode = 'en',
   }) async {
-    final apiKey = dotenv.env['CLAUDE_API_KEY'] ?? '';
-
-    if (apiKey.isEmpty || apiKey == 'your_key_here') {
-      throw const ClaudeException(
-        ClaudeError.noApiKey,
-        'No API key found. Add your Claude key to the .env file: CLAUDE_API_KEY=sk-ant-…',
-      );
-    }
-
     try {
       final imageBytes = await imageFile.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
-      final langInst = _languageInstruction(langCode);
-      final promptText = correction != null
-          ? '$_prompt$langInst\n\nIMPORTANT CORRECTION FROM USER: Your previous analysis was wrong. The user says this food is actually: "$correction". Please re-analyze with this correction in mind and provide accurate nutritional values for what the user described.'
-          : '$_prompt$langInst';
+      final http.Response response;
 
-      final response = await http.post(
-        Uri.parse(_apiUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: jsonEncode({
-          'model': _model,
-          'max_tokens': 1024,
-          'messages': [
-            {
-              'role': 'user',
-              'content': [
-                {
-                  'type': 'image',
-                  'source': {
-                    'type': 'base64',
-                    'media_type': 'image/jpeg',
-                    'data': base64Image,
-                  },
-                },
-                {
-                  'type': 'text',
-                  'text': promptText,
-                },
-              ],
-            },
-          ],
-        }),
-      );
-
-      if (response.statusCode == 401) {
-        throw const ClaudeException(
-          ClaudeError.invalidApiKey,
-          'Invalid API key. Please check the CLAUDE_API_KEY value in your .env file.',
+      if (_useProxy) {
+        // ── Proxy mode ─────────────────────────────────────────────────────
+        final appSecret = dotenv.env['APP_SECRET'] ?? '';
+        response = await http.post(
+          Uri.parse('$_backendUrl/api/analyze'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-app-secret': appSecret,
+          },
+          body: jsonEncode({
+            'image_base64': base64Image,
+            'media_type': 'image/jpeg',
+            'correction': correction,
+            'lang': langCode,
+          }),
         );
-      }
-
-      if (response.statusCode == 429) {
-        throw const ClaudeException(
-          ClaudeError.rateLimited,
-          'API rate limit reached. Please wait a moment and try again.',
-        );
-      }
-
-      if (response.statusCode != 200) {
-        final body = jsonDecode(response.body);
-        final errorMsg = body['error']?['message'] ?? 'Unknown error';
-        final errorType = body['error']?['type'] ?? '';
-
-        // Detect insufficient credits
-        if (errorMsg.toLowerCase().contains('credit') ||
-            errorMsg.toLowerCase().contains('billing')) {
+      } else {
+        // ── Direct API mode (development) ──────────────────────────────────
+        final apiKey = dotenv.env['CLAUDE_API_KEY'] ?? '';
+        if (apiKey.isEmpty || apiKey == 'your_key_here') {
           throw const ClaudeException(
-            ClaudeError.insufficientCredits,
-            'Insufficient API credits.',
+            ClaudeError.noApiKey,
+            'No API key found. Add your Claude key to the .env file: CLAUDE_API_KEY=sk-ant-…',
           );
         }
 
-        throw ClaudeException(
-          ClaudeError.unknown,
-          '[${response.statusCode}] $errorType: $errorMsg',
+        final langInst = _languageInstruction(langCode);
+        final promptText = correction != null
+            ? '$_prompt$langInst\n\nIMPORTANT CORRECTION FROM USER: Your previous analysis was wrong. The user says this food is actually: "$correction". Please re-analyze with this correction in mind and provide accurate nutritional values for what the user described.'
+            : '$_prompt$langInst';
+
+        response = await http.post(
+          Uri.parse(_directApiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: jsonEncode({
+            'model': _model,
+            'max_tokens': 1024,
+            'messages': [
+              {
+                'role': 'user',
+                'content': [
+                  {
+                    'type': 'image',
+                    'source': {
+                      'type': 'base64',
+                      'media_type': 'image/jpeg',
+                      'data': base64Image,
+                    },
+                  },
+                  {'type': 'text', 'text': promptText},
+                ],
+              },
+            ],
+          }),
         );
       }
 
-      final body = jsonDecode(response.body);
-      final content = body['content'] as List<dynamic>;
-      final text = content
-          .where((c) => c['type'] == 'text')
-          .map((c) => c['text'] as String)
-          .join();
-
-      if (text.trim().isEmpty) {
-        throw const ClaudeException(
-          ClaudeError.unrecognizedFood,
-          'The model returned an empty response. Try a clearer photo.',
-        );
-      }
-
-      // Strip optional markdown fences just in case
-      final clean = text
-          .replaceAll(RegExp(r'```json\s*'), '')
-          .replaceAll(RegExp(r'```\s*'), '')
-          .trim();
-
-      final json = jsonDecode(clean) as Map<String, dynamic>;
-
-      // Normalise types — model sometimes returns strings for numbers
-      return {
-        'foodName': json['foodName']?.toString() ?? 'Unknown',
-        'portionSize': json['portionSize']?.toString() ?? '',
-        'calories': _toInt(json['calories']),
-        'protein': _toDouble(json['protein']),
-        'carbs': _toDouble(json['carbs']),
-        'fat': _toDouble(json['fat']),
-        'confidence': json['confidence']?.toString() ?? 'medium',
-        'notes': json['notes']?.toString() ?? '',
-      };
+      return _parseAnthropicResponse(response);
     } on ClaudeException {
       rethrow;
     } on SocketException {
@@ -207,6 +164,69 @@ If you cannot identify food in the image, set foodName to "Unknown" and confiden
       throw ClaudeException(
           ClaudeError.unknown, 'Unexpected error: ${e.toString()}');
     }
+  }
+
+  Map<String, dynamic> _parseAnthropicResponse(http.Response response) {
+    if (response.statusCode == 401) {
+      throw const ClaudeException(
+        ClaudeError.invalidApiKey,
+        'Invalid API key. Please check the CLAUDE_API_KEY value in your .env file.',
+      );
+    }
+    if (response.statusCode == 429) {
+      throw const ClaudeException(
+        ClaudeError.rateLimited,
+        'API rate limit reached. Please wait a moment and try again.',
+      );
+    }
+    if (response.statusCode != 200) {
+      final body = jsonDecode(response.body);
+      final errorMsg = body['error']?['message'] ?? 'Unknown error';
+      final errorType = body['error']?['type'] ?? '';
+      if (errorMsg.toLowerCase().contains('credit') ||
+          errorMsg.toLowerCase().contains('billing')) {
+        throw const ClaudeException(
+          ClaudeError.insufficientCredits,
+          'Insufficient API credits.',
+        );
+      }
+      throw ClaudeException(
+        ClaudeError.unknown,
+        '[${response.statusCode}] $errorType: $errorMsg',
+      );
+    }
+
+    final body = jsonDecode(response.body);
+    final content = body['content'] as List<dynamic>;
+    final text = content
+        .where((c) => c['type'] == 'text')
+        .map((c) => c['text'] as String)
+        .join();
+
+    if (text.trim().isEmpty) {
+      throw const ClaudeException(
+        ClaudeError.unrecognizedFood,
+        'The model returned an empty response. Try a clearer photo.',
+      );
+    }
+
+    final clean = text
+        .replaceAll(RegExp(r'```json\s*'), '')
+        .replaceAll(RegExp(r'```\s*'), '')
+        .trim();
+
+    final json = jsonDecode(clean) as Map<String, dynamic>;
+
+    return {
+      'foodName': json['foodName']?.toString() ?? 'Unknown',
+      'portionSize': json['portionSize']?.toString() ?? '',
+      'calories': _toInt(json['calories']),
+      'protein': _toDouble(json['protein']),
+      'carbs': _toDouble(json['carbs']),
+      'fat': _toDouble(json['fat']),
+      'confidence': json['confidence']?.toString() ?? 'medium',
+      'notes': json['notes']?.toString() ?? '',
+    };
   }
 
   /// Builds a [Meal] from the JSON returned by [analyzeImage].

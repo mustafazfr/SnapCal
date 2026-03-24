@@ -1,0 +1,14 @@
+name = "calorielens-api"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (set these via CLI — never commit values here):
+#   wrangler secret put ANTHROPIC_API_KEY
+#   wrangler secret put APP_SECRET
+
+# Optional: add rate limiting via Cloudflare's built-in rate limiting rules
+# in the Cloudflare dashboard under Workers → your worker → Settings → Rate Limiting.
+
+[observability]
+enabled = true

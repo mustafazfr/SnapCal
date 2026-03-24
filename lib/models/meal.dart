@@ -58,14 +58,24 @@ class Meal {
   String get formattedTime => DateFormat('h:mm a').format(timestamp);
 
   /// Use [clearImage] = true to explicitly set imagePath to null.
-  Meal copyWith({String? imagePath, bool clearImage = false}) => Meal(
+  Meal copyWith({
+    String? foodName,
+    String? portionSize,
+    int? calories,
+    double? protein,
+    double? carbs,
+    double? fat,
+    String? imagePath,
+    bool clearImage = false,
+  }) =>
+      Meal(
         id: id,
-        foodName: foodName,
-        portionSize: portionSize,
-        calories: calories,
-        protein: protein,
-        carbs: carbs,
-        fat: fat,
+        foodName: foodName ?? this.foodName,
+        portionSize: portionSize ?? this.portionSize,
+        calories: calories ?? this.calories,
+        protein: protein ?? this.protein,
+        carbs: carbs ?? this.carbs,
+        fat: fat ?? this.fat,
         timestamp: timestamp,
         imagePath: clearImage ? null : (imagePath ?? this.imagePath),
         confidence: confidence,

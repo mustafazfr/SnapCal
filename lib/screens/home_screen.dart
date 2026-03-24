@@ -260,6 +260,10 @@ class _HomeScreenState extends State<HomeScreen>
                       onSave: _save,
                       onCorrect: (correction) =>
                           _analyze(correction: correction),
+                      onDiscard: () => setState(() {
+                        _result = null;
+                        _image = null;
+                      }),
                     ),
                   ),
 

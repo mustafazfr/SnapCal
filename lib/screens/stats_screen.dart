@@ -2,8 +2,10 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/health_service.dart';
+import '../services/nutrition_report_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_localizations.dart';
+import 'nutrition_report_screen.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -177,6 +179,11 @@ class _StatsScreenState extends State<StatsScreen>
                               daysLogged: _daysLogged,
                               daysUnder: _daysUnderGoal,
                               goal: _goal,
+                            ),
+                            const SizedBox(height: 12),
+                            _AiAnalysisButton(
+                              weekStart: _weekStart,
+                              weekEnd: _weekEnd,
                             ),
                           ],
                           if (_healthEnabled) ...[
@@ -797,6 +804,134 @@ class _ActivitySummary extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── AI Analysis Button ────────────────────────────────────────────────────────
+
+class _AiAnalysisButton extends StatefulWidget {
+  final DateTime weekStart;
+  final DateTime weekEnd;
+
+  const _AiAnalysisButton(
+      {required this.weekStart, required this.weekEnd});
+
+  @override
+  State<_AiAnalysisButton> createState() => _AiAnalysisButtonState();
+}
+
+class _AiAnalysisButtonState extends State<_AiAnalysisButton> {
+  bool _loading = false;
+
+  Future<void> _generate() async {
+    final loc = AppLocalizations.of(context);
+    final lang = AppLocalizations.of(context).language.name;
+
+    // Period selector
+    final period = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: Text(loc.get('select_period'),
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_view_week_rounded),
+              title: Text(loc.get('this_week')),
+              onTap: () => Navigator.pop(ctx, 'week'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calendar_month_rounded),
+              title: Text(loc.get('last_30_days')),
+              onTap: () => Navigator.pop(ctx, '30days'),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (period == null || !mounted) return;
+
+    final now = DateTime.now();
+    final start = period == 'week'
+        ? widget.weekStart
+        : now.subtract(const Duration(days: 29));
+    final end = period == 'week' ? widget.weekEnd : now;
+
+    setState(() => _loading = true);
+    try {
+      final report = await NutritionReportService.instance.generate(
+        start: start,
+        end: end,
+        langCode: lang,
+      );
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NutritionReportScreen(report: report),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString()),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton.tonalIcon(
+        onPressed: _loading ? null : _generate,
+        icon: _loading
+            ? SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: cs.primary),
+              )
+            : const Icon(Icons.auto_awesome_rounded, size: 18),
+        label: Text(_loading
+            ? loc.get('generating_report')
+            : loc.get('ai_nutrition_report')),
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 48),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
     );
   }
 }

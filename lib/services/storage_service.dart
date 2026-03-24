@@ -120,6 +120,18 @@ class StorageService {
     }
   }
 
+  /// Returns all meals between [start] and [end] (inclusive).
+  Future<List<Meal>> getMealsInRange(DateTime start, DateTime end) async {
+    final meals = <Meal>[];
+    var date = DateTime(start.year, start.month, start.day);
+    final endDay = DateTime(end.year, end.month, end.day);
+    while (!date.isAfter(endDay)) {
+      meals.addAll(await getMealsForDate(date));
+      date = date.add(const Duration(days: 1));
+    }
+    return meals;
+  }
+
   /// Returns a map of DateTime → total calories for 7 days starting at [weekStart].
   Future<Map<DateTime, int>> getWeeklyCalories(DateTime weekStart) async {
     final result = <DateTime, int>{};

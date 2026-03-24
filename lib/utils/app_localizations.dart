@@ -227,6 +227,33 @@ class AppLocalizations extends InheritedWidget {
       'calorie_balance': 'Calorie Balance',
       'you_can_eat_more': 'You can eat %s more kcal',
       'you_are_over': 'You are %s kcal over goal',
+
+      // Nutrition Report
+      'ai_nutrition_report': '🤖 AI Nutrition Analysis',
+      'generating_report': 'Generating report...',
+      'select_period': 'Select period',
+      'last_30_days': 'Last 30 days',
+
+      // Subscription / Paywall
+      'premium': 'Premium',
+      'premium_title': 'Unlock CalorieLens Premium',
+      'premium_subtitle': 'Unlimited analyses, reports and more',
+      'premium_unavailable': 'Subscriptions not available right now',
+      'free': 'Free',
+      'unlimited': 'Unlimited',
+      'day': 'day',
+      'week': 'week',
+      'best_value': 'BEST VALUE',
+      'restore_purchase': 'Restore purchase',
+      'feature_analysis': 'Food analysis',
+      'feature_report': 'AI weekly report',
+      'feature_water': 'Water tracking',
+      'feature_steps': 'Step tracking',
+      'subscription': 'Subscription',
+      'manage_subscription': 'Manage subscription',
+      'go_premium': 'Go Premium',
+      'daily_limit_reached': 'Daily limit reached',
+      'upgrade_for_more': 'Upgrade to Premium for unlimited access',
     },
     AppLanguage.tr: {
       // Navigation
@@ -421,6 +448,33 @@ class AppLocalizations extends InheritedWidget {
       'calorie_balance': 'Kalori Dengesi',
       'you_can_eat_more': '%s kcal daha yiyebilirsin',
       'you_are_over': 'Hedefi %s kcal aştın',
+
+      // Nutrition Report
+      'ai_nutrition_report': '🤖 AI Beslenme Analizi',
+      'generating_report': 'Rapor oluşturuluyor...',
+      'select_period': 'Dönem seç',
+      'last_30_days': 'Son 30 gün',
+
+      // Subscription / Paywall
+      'premium': 'Premium',
+      'premium_title': 'CalorieLens Premium\'u Aç',
+      'premium_subtitle': 'Sınırsız analiz, rapor ve daha fazlası',
+      'premium_unavailable': 'Abonelikler şu an mevcut değil',
+      'free': 'Ücretsiz',
+      'unlimited': 'Sınırsız',
+      'day': 'gün',
+      'week': 'hafta',
+      'best_value': 'EN İYİ',
+      'restore_purchase': 'Satın almayı geri yükle',
+      'feature_analysis': 'Yemek analizi',
+      'feature_report': 'AI haftalık rapor',
+      'feature_water': 'Su takibi',
+      'feature_steps': 'Adım takibi',
+      'subscription': 'Abonelik',
+      'manage_subscription': 'Aboneliği yönet',
+      'go_premium': 'Premium\'a Geç',
+      'daily_limit_reached': 'Günlük limit doldu',
+      'upgrade_for_more': 'Sınırsız erişim için Premium\'a geç',
     },
   };
 }

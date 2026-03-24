@@ -259,4 +259,92 @@ If you cannot identify food in the image, set foodName to "Unknown" and confiden
     if (v is String) return double.tryParse(v) ?? 0.0;
     return 0.0;
   }
+
+  /// Generates a weekly/monthly nutrition report from meal stats.
+  /// Routes through /api/report proxy if BACKEND_URL set, otherwise direct Haiku.
+  Future<String> generateNutritionReport({
+    required Map<String, dynamic> stats,
+    required String langCode,
+  }) async {
+    try {
+      final http.Response response;
+
+      if (_useProxy) {
+        final appSecret = dotenv.env['APP_SECRET'] ?? '';
+        response = await http.post(
+          Uri.parse('$_backendUrl/api/report'),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-app-secret': appSecret,
+          },
+          body: jsonEncode({...stats, 'lang': langCode}),
+        );
+      } else {
+        final apiKey = dotenv.env['CLAUDE_API_KEY'] ?? '';
+        if (apiKey.isEmpty || apiKey == 'your_key_here') {
+          throw const ClaudeException(ClaudeError.noApiKey, 'No API key found.');
+        }
+        final langName = langCode == 'tr' ? 'Türkçe' : 'English';
+        final prompt = _buildReportPrompt(stats, langName);
+        response = await http.post(
+          Uri.parse(_directApiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: jsonEncode({
+            'model': 'claude-haiku-4-5-20251001',
+            'max_tokens': 1024,
+            'messages': [
+              {'role': 'user', 'content': prompt}
+            ],
+          }),
+        );
+      }
+
+      if (response.statusCode != 200) {
+        throw ClaudeException(
+            ClaudeError.unknown, 'Report error: ${response.statusCode}');
+      }
+      final body = jsonDecode(response.body);
+      final content = body['content'] as List<dynamic>;
+      return content
+          .where((c) => c['type'] == 'text')
+          .map((c) => c['text'] as String)
+          .join()
+          .trim();
+    } on ClaudeException {
+      rethrow;
+    } on SocketException {
+      throw const ClaudeException(ClaudeError.noInternet, 'No internet connection.');
+    } catch (e) {
+      throw ClaudeException(ClaudeError.unknown, 'Report error: ${e.toString()}');
+    }
+  }
+
+  static String _buildReportPrompt(Map<String, dynamic> s, String langName) {
+    return '''You are a professional nutritionist. Analyze the following nutrition data and provide personalized advice.
+
+USER PROFILE:
+- Daily calorie goal: ${s['calorie_goal']} kcal
+- Period: ${s['start_date']} – ${s['end_date']}
+
+DATA:
+- Total days: ${s['total_days']}
+- Days logged: ${s['logged_days']}
+- Average daily calories: ${s['avg_calories']} kcal
+- Average protein: ${s['avg_protein']}g | Carbs: ${s['avg_carbs']}g | Fat: ${s['avg_fat']}g
+- Most eaten foods: ${s['top_foods']}
+- Days under goal: ${s['under_goal_days']}
+- Days over goal: ${s['over_goal_days']}
+
+TASK:
+1. Overall assessment (2-3 sentences)
+2. Strengths (2-3 points)
+3. Areas for improvement (2-3 points)
+4. Concrete suggestions (3-4 points)
+
+Be concise, motivating, and constructive. Respond in $langName.''';
+  }
 }
